@@ -1,0 +1,44 @@
+name: pwm
+description: PWD Tender and Investor Management System
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.8.0
+  firebase_auth: ^5.4.0
+  cloud_firestore: ^5.6.0
+  firebase_storage: ^12.4.0
+
+  # State Management
+  provider: ^6.1.2
+
+  # Charts
+  fl_chart: ^0.69.0
+
+  # Image handling
+  image_picker: ^1.1.2
+  cached_network_image: ^3.4.1
+
+  # GPS
+  geolocator: ^13.0.1
+
+  # Formatting
+  intl: ^0.19.0
+
+  # UI
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
