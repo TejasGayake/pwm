@@ -4,9 +4,22 @@ import '../../providers/expense_provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/expense_tile.dart';
 
-class ExpenseListScreen extends StatelessWidget {
+class ExpenseListScreen extends StatefulWidget {
   final String tenderId;
   const ExpenseListScreen({super.key, required this.tenderId});
+
+  @override
+  State<ExpenseListScreen> createState() => _ExpenseListScreenState();
+}
+
+class _ExpenseListScreenState extends State<ExpenseListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ExpenseProvider>().listenToExpenses(widget.tenderId);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -58,6 +58,8 @@ class TenderModel {
     DateTime? startDate,
     DateTime? endDate,
     String? status,
+    String? createdBy,
+    DateTime? updatedAt,
   }) => TenderModel(
     id: id,
     name: name ?? this.name,
@@ -66,8 +68,9 @@ class TenderModel {
     startDate: startDate ?? this.startDate,
     endDate: endDate ?? this.endDate,
     status: status ?? this.status,
-    createdBy: createdBy,
+    createdBy: createdBy ?? this.createdBy,
     createdAt: createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
 
   bool get isActive => status == 'active';

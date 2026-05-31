@@ -25,6 +25,7 @@ class _EngineerDashboardState extends State<EngineerDashboard> {
   double _totalInvested = 0;
   double _totalSpent = 0;
   bool _loadingStats = true;
+  bool _statsLoaded = false;
 
   @override
   void initState() {
@@ -85,11 +86,15 @@ class _EngineerDashboardState extends State<EngineerDashboard> {
     final tenders = tenderProvider.tenders;
     final activeTenders = tenderProvider.activeTenders;
 
-    // Trigger aggregate stats loading when tenders change
-    if (tenders.isNotEmpty && _loadingStats) {
-      _loadAggregateStats(tenders);
+    // Trigger aggregate stats loading once when tenders arrive
+    if (tenders.isNotEmpty && !_statsLoaded) {
+      _statsLoaded = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadAggregateStats(tenders);
+      });
     }
-    if (tenders.isEmpty && !_loadingStats) {
+    if (tenders.isEmpty && _statsLoaded) {
+      _statsLoaded = false;
       _loadingStats = true;
     }
 
@@ -278,7 +283,7 @@ class _EngineerDashboardState extends State<EngineerDashboard> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) =>
-                                        TenderDetailScreen(tender: t as dynamic),
+                                        TenderDetailScreen(tender: t),
                                   ),
                                 ),
                               ),
