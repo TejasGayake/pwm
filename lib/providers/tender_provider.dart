@@ -6,6 +6,8 @@ class TenderProvider extends ChangeNotifier {
   final TenderService _service = TenderService();
   List<TenderModel> _tenders = [];
   bool _isLoading = false;
+  String? _uid;
+  String? _role;
 
   List<TenderModel> get tenders => _tenders;
   List<TenderModel> get activeTenders => _tenders.where((t) => t.status == 'active').toList();
@@ -13,17 +15,19 @@ class TenderProvider extends ChangeNotifier {
   List<TenderModel> get onHoldTenders => _tenders.where((t) => t.status == 'on_hold').toList();
   bool get isLoading => _isLoading;
 
-  Future<void> loadTenders() async {
+  Future<void> loadTenders({String? uid, String? role}) async {
     _isLoading = true; notifyListeners();
-    _tenders = await _service.getTenders();
+    _tenders = await _service.getTenders(uid: uid, role: role);
     _isLoading = false; notifyListeners();
   }
 
   void listenToTenders(String uid, String role) {
-    loadTenders();
+    _uid = uid;
+    _role = role;
+    loadTenders(uid: uid, role: role);
   }
 
-  Future<void> createTender(TenderModel t) async { await _service.createTender(t); await loadTenders(); }
-  Future<void> updateTender(String id, Map<String, dynamic> data) async { await _service.updateTender(id, data); await loadTenders(); }
-  Future<void> deleteTender(String id) async { await _service.deleteTender(id); await loadTenders(); }
+  Future<void> createTender(TenderModel t) async { await _service.createTender(t); await loadTenders(uid: _uid, role: _role); }
+  Future<void> updateTender(String id, Map<String, dynamic> data) async { await _service.updateTender(id, data); await loadTenders(uid: _uid, role: _role); }
+  Future<void> deleteTender(String id) async { await _service.deleteTender(id); await loadTenders(uid: _uid, role: _role); }
 }

@@ -11,7 +11,12 @@ class TenderService {
   Future<void> updateTender(String id, Map<String, dynamic> data) async => await _fs.updateDoc('tenders', id, data);
   Future<void> deleteTender(String id) async => await _fs.deleteDoc('tenders', id);
 
-  Future<List<TenderModel>> getTenders() async {
+  Future<List<TenderModel>> getTenders({String? uid, String? role}) async {
+    if (role == 'engineer' && uid != null) {
+      return await _fs.getTendersForEngineer(uid).first;
+    } else if (role == 'investor' && uid != null) {
+      return await _fs.getTendersForInvestor(uid).first;
+    }
     final snap = await _fs.getCollection('tenders', orderBy: 'createdAt', descending: true);
     return snap.docs.map((d) => TenderModel.fromMap(d.id, d.data() as Map<String, dynamic>)).toList();
   }
