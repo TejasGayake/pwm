@@ -16,7 +16,7 @@ class AuthService {
   Future<AppUser?> register(String name, String email, String phone, String password, String role) async {
     final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
     await _firestore.collection('users').doc(cred.user!.uid).set({
-      'name': name, 'email': email, 'phone': phone, 'role': role, 'createdAt': DateTime.now().toIso8601String(),
+      'name': name, 'email': email, 'phone': phone, 'role': role, 'createdAt': Timestamp.fromDate(DateTime.now()),
     });
     _currentUser = AppUser(uid: cred.user!.uid, name: name, email: email, phone: phone, role: role, createdAt: DateTime.now());
     return _currentUser;

@@ -19,6 +19,7 @@ class AppUser {
 
   bool get isEngineer => role == 'engineer';
   bool get isInvestor => role == 'investor';
+  bool get isBuilder => role == 'builder';
 
   Map<String, dynamic> toMap() => {
     'name': name,
