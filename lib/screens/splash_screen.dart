@@ -5,8 +5,26 @@ import 'auth/login_screen.dart';
 import '../screens/engineer/dashboard_screen.dart';
 import '../screens/investor/investor_dashboard.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tryAutoLogin();
+    });
+  }
+
+  Future<void> _tryAutoLogin() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    await auth.tryAutoLogin();
+  }
 
   @override
   Widget build(BuildContext context) {
