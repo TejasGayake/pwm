@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/contribution_model.dart';
 import '../models/expense_model.dart';
@@ -9,6 +10,15 @@ class FinancialProvider extends ChangeNotifier {
   List<ContributionModel> _contributions = [];
   List<ExpenseModel> _expenses = [];
   Map<String, double> _categoryTotals = {};
+
+  StreamSubscription<List<ContributionModel>>? _contributionsSubscription;
+  StreamSubscription<List<ExpenseModel>>? _expensesSubscription;
+
+  bool _isRecalculating = false;
+  bool _recalculatePending = false;
+  double? _pendingTargetAmount;
+  DateTime? _pendingStartDate;
+  String? _pendingTenderId;
 
   List<ContributionModel> get contributions => _contributions;
   List<ExpenseModel> get expenses => _expenses;
@@ -22,18 +32,37 @@ class FinancialProvider extends ChangeNotifier {
   FinancialSummary? _summary;
 
   void listenToTenderFinancials(String tenderId, double targetAmount, DateTime startDate) {
-    _firestore.getContributionsForTender(tenderId).listen((contributions) {
+    _contributionsSubscription?.cancel();
+    _expensesSubscription?.cancel();
+
+    _contributionsSubscription =
+        _firestore.getContributionsForTender(tenderId).listen((contributions) {
       _contributions = contributions;
-      _recalculate(targetAmount, startDate, tenderId);
+      _requestRecalculation(targetAmount, startDate, tenderId);
     });
 
-    _firestore.getExpensesForTender(tenderId).listen((expenses) {
+    _expensesSubscription =
+        _firestore.getExpensesForTender(tenderId).listen((expenses) {
       _expenses = expenses;
-      _recalculate(targetAmount, startDate, tenderId);
+      _requestRecalculation(targetAmount, startDate, tenderId);
     });
   }
 
+  void _requestRecalculation(double targetAmount, DateTime startDate, String tenderId) {
+    if (_isRecalculating) {
+      _recalculatePending = true;
+      _pendingTargetAmount = targetAmount;
+      _pendingStartDate = startDate;
+      _pendingTenderId = tenderId;
+      return;
+    }
+    _recalculate(targetAmount, startDate, tenderId);
+  }
+
   Future<void> _recalculate(double targetAmount, DateTime startDate, String tenderId) async {
+    _isRecalculating = true;
+    _recalculatePending = false;
+
     _summary = EquityCalculator.computeSummary(
       targetAmount: targetAmount,
       contributions: _contributions,
@@ -52,7 +81,22 @@ class FinancialProvider extends ChangeNotifier {
       contributions: _contributions,
     );
 
+    _isRecalculating = false;
+
+    if (_recalculatePending) {
+      _recalculatePending = false;
+      await _recalculate(_pendingTargetAmount!, _pendingStartDate!, _pendingTenderId!);
+      return;
+    }
+
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _contributionsSubscription?.cancel();
+    _expensesSubscription?.cancel();
+    super.dispose();
   }
 
   Future<String> addContribution(String tenderId, ContributionModel contribution) async {

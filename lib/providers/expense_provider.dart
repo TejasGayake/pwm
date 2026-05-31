@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/expense_model.dart';
 import '../services/firestore_service.dart';
@@ -6,6 +7,7 @@ class ExpenseProvider extends ChangeNotifier {
   final FirestoreService _firestore = FirestoreService();
   List<ExpenseModel> _expenses = [];
   String _categoryFilter = 'all';
+  StreamSubscription<List<ExpenseModel>>? _expensesSubscription;
 
   List<ExpenseModel> get expenses {
     if (_categoryFilter == 'all') return _expenses;
@@ -17,10 +19,18 @@ class ExpenseProvider extends ChangeNotifier {
   String get categoryFilter => _categoryFilter;
 
   void listenToExpenses(String tenderId) {
-    _firestore.getExpensesForTender(tenderId).listen((expenses) {
+    _expensesSubscription?.cancel();
+    _expensesSubscription =
+        _firestore.getExpensesForTender(tenderId).listen((expenses) {
       _expenses = expenses;
       notifyListeners();
     });
+  }
+
+  @override
+  void dispose() {
+    _expensesSubscription?.cancel();
+    super.dispose();
   }
 
   void setCategoryFilter(String category) {
