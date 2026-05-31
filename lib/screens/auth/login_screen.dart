@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     obscureText: _obscurePassword,
-                    validator: (v) => v == null || v.length < 6 ? 'Password must be at least 6 characters' : null,
+                    validator: (v) => v == null || v.length < 5 ? 'Password must be at least 5 characters' : null,
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton(

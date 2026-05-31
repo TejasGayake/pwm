@@ -94,9 +94,6 @@ class _AddEditTenderScreenState extends State<AddEditTenderScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.tender == null ? 'Create Tender' : 'Edit Tender'),
-        actions: [
-          TextButton(onPressed: _isSaving ? null : _save, child: const Text('Save')),
-        ],
       ),
       body: Form(
         key: _formKey,
