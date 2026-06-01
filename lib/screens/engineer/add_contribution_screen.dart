@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
+import '../../main.dart';
 import '../../models/investor_model.dart';
 import '../../models/contribution_model.dart';
 import '../../services/tender_service.dart';
 import '../../services/storage_service.dart';
+import '../../services/location_service.dart';
 import '../../utils/helpers.dart';
 import '../../theme/app_theme.dart';
 
 class AddContributionScreen extends StatefulWidget {
   final String tenderId;
-  const AddContributionScreen({super.key, required this.tenderId});
+  final String? sharedImagePath;
+  const AddContributionScreen({super.key, required this.tenderId, this.sharedImagePath});
 
   @override
   State<AddContributionScreen> createState() => _AddContributionScreenState();
@@ -22,18 +26,33 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
   final _bankRefCtrl = TextEditingController();
   final TenderService _tenderService = TenderService();
   final StorageService _storageService = StorageService();
+  final LocationService _locationService = LocationService();
 
   List<InvestorModel> _investors = [];
   String? _selectedInvestorId;
   DateTime _date = DateTime.now();
   File? _photo;
+  String _paymentMode = 'cash';
+  double? _gpsLat;
+  double? _gpsLng;
   bool _isSaving = false;
   bool _loadingInvestors = true;
+  bool _isCapturingLocation = false;
 
   @override
   void initState() {
     super.initState();
     _loadInvestors();
+    // Pre-fill photo from share intent
+    if (widget.sharedImagePath != null) {
+      _photo = File(widget.sharedImagePath!);
+      _paymentMode = 'phonepe';
+      pendingSharedImagePath = null;
+    } else if (pendingSharedImagePath != null) {
+      _photo = File(pendingSharedImagePath!);
+      _paymentMode = 'phonepe';
+      pendingSharedImagePath = null;
+    }
   }
 
   Future<void> _loadInvestors() async {
@@ -55,14 +74,64 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
 
   Future<void> _pickPhoto() async {
     final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Take Photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Choose from Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source == null) return;
     final picked = await picker.pickImage(
-      source: ImageSource.gallery,
+      source: source,
       maxWidth: 1920,
       imageQuality: 85,
     );
     if (picked != null) {
       setState(() => _photo = File(picked.path));
+      // Auto GPS when taking from camera
+      if (source == ImageSource.camera) {
+        _captureLocation();
+      }
     }
+  }
+
+  Future<void> _captureLocation() async {
+    setState(() => _isCapturingLocation = true);
+    final result = await _locationService.getCurrentLocation();
+    if (result != null) {
+      setState(() {
+        _gpsLat = result.latitude;
+        _gpsLng = result.longitude;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'GPS: ${result.latitude.toStringAsFixed(6)}, ${result.longitude.toStringAsFixed(6)}',
+            ),
+            backgroundColor: AppTheme.successGreen,
+          ),
+        );
+      }
+    }
+    setState(() => _isCapturingLocation = false);
   }
 
   Future<void> _pickDate() async {
@@ -73,6 +142,15 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
       lastDate: DateTime(2035),
     );
     if (picked != null) setState(() => _date = picked);
+  }
+
+  bool get _isOnlinePayment => _paymentMode != 'cash';
+  bool get _isSharedImage => widget.sharedImagePath != null;
+
+  String get _photoLabel {
+    if (_isSharedImage) return 'PhonePe Screenshot Received';
+    if (_isOnlinePayment) return 'Attach payment screenshot';
+    return 'Attach receipt (optional)';
   }
 
   Future<void> _save() async {
@@ -104,6 +182,7 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
         date: _date,
         bankReference: _bankRefCtrl.text.trim(),
         receiptPhotoUrl: photoUrl,
+        paymentMode: _paymentMode,
       );
       await _tenderService.recordContribution(widget.tenderId, contribution);
       if (mounted) {
@@ -182,6 +261,22 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                           v == null ? 'Please select an investor' : null,
                     ),
                   const SizedBox(height: 16),
+                  // Payment Mode
+                  DropdownButtonFormField<String>(
+                    value: _paymentMode,
+                    decoration: const InputDecoration(
+                      labelText: 'Payment Mode',
+                      prefixIcon: Icon(Icons.payment),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                      DropdownMenuItem(value: 'phonepe', child: Text('PhonePe')),
+                      DropdownMenuItem(value: 'bank_transfer', child: Text('Bank Transfer')),
+                      DropdownMenuItem(value: 'upi', child: Text('UPI')),
+                    ],
+                    onChanged: (v) => setState(() => _paymentMode = v ?? 'cash'),
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _amountCtrl,
                     decoration: const InputDecoration(
@@ -211,14 +306,23 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _bankRefCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Bank Reference / UTR Number',
-                      prefixIcon: Icon(Icons.receipt),
+                  // Bank Reference (required for online, hidden for cash)
+                  if (_isOnlinePayment)
+                    TextFormField(
+                      controller: _bankRefCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Bank Reference / UTR Number',
+                        prefixIcon: Icon(Icons.receipt),
+                      ),
+                      validator: (v) {
+                        if (_isOnlinePayment && (v == null || v.trim().isEmpty)) {
+                          return 'Required for online payments';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 16),
+                  if (_isOnlinePayment) const SizedBox(height: 16),
+                  // Photo preview
                   if (_photo != null)
                     Stack(
                       children: [
@@ -246,13 +350,31 @@ class _AddContributionScreenState extends State<AddContributionScreen> {
                         ),
                       ],
                     ),
+                  // Photo button
                   OutlinedButton.icon(
-                    onPressed: _pickPhoto,
-                    icon: const Icon(Icons.photo_camera),
-                    label: Text(_photo == null
-                        ? 'Attach Receipt Photo'
-                        : 'Change Photo'),
+                    onPressed: _isSharedImage ? null : _pickPhoto,
+                    icon: Icon(_isSharedImage ? Icons.check_circle : Icons.photo_camera),
+                    label: Text(_photoLabel),
                   ),
+                  // GPS capture (for cash payments at site)
+                  if (_paymentMode == 'cash') ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _isCapturingLocation ? null : _captureLocation,
+                      icon: _isCapturingLocation
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.location_on),
+                      label: Text(
+                        _gpsLat != null
+                            ? 'GPS: ${_gpsLat!.toStringAsFixed(4)}, ${_gpsLng!.toStringAsFixed(4)}'
+                            : 'Capture GPS Location (optional)',
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   ElevatedButton(
                     onPressed: _isSaving ? null : _save,
