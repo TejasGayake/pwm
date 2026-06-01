@@ -13,6 +13,8 @@ import 'screens/splash_screen.dart';
 /// once AddContributionScreen picks it up.
 String? pendingSharedImagePath;
 
+final _sharingIntent = ReceiveSharingIntent.instance;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -21,7 +23,7 @@ void main() async {
 
   // Cold start: check if the app was launched via a share intent
   try {
-    final initialFiles = await ReceiveSharingIntent.getInitialMedia();
+    final initialFiles = await _sharingIntent.getInitialMedia();
     if (initialFiles.isNotEmpty) {
       pendingSharedImagePath = initialFiles.first.path;
     }
@@ -46,7 +48,7 @@ class _PwmAppState extends State<PwmApp> {
   void initState() {
     super.initState();
     // Warm start: listen for shared files while the app is already running
-    _intentSub = ReceiveSharingIntent.getMediaStream().listen(
+    _intentSub = _sharingIntent.getMediaStream().listen(
       (files) {
         if (files.isNotEmpty) {
           setState(() {
