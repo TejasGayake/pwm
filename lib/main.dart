@@ -1,22 +1,68 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'providers/auth_provider.dart';
-import 'services/auth_service.dart';
 import 'screens/splash_screen.dart';
+
+/// Global: holds the path of a shared image waiting to be consumed
+/// by AddContributionScreen. Set by the share intent listener, cleared
+/// once AddContributionScreen picks it up.
+String? pendingSharedImagePath;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Cold start: check if the app was launched via a share intent
+  try {
+    final initialFiles = await ReceiveSharingIntent.getInitialMedia();
+    if (initialFiles.isNotEmpty) {
+      pendingSharedImagePath = initialFiles.first.path;
+    }
+  } catch (_) {
+    // Plugin may throw if no intent; ignore
+  }
+
   runApp(const PwmApp());
 }
 
-class PwmApp extends StatelessWidget {
+class PwmApp extends StatefulWidget {
   const PwmApp({super.key});
+
+  @override
+  State<PwmApp> createState() => _PwmAppState();
+}
+
+class _PwmAppState extends State<PwmApp> {
+  StreamSubscription? _intentSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Warm start: listen for shared files while the app is already running
+    _intentSub = ReceiveSharingIntent.getMediaStream().listen(
+      (files) {
+        if (files.isNotEmpty) {
+          setState(() {
+            pendingSharedImagePath = files.first.path;
+          });
+        }
+      },
+      onError: (_) {},
+    );
+  }
+
+  @override
+  void dispose() {
+    _intentSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
