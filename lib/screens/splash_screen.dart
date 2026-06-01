@@ -47,9 +47,13 @@ class _SplashScreenState extends State<SplashScreen> {
       );
     }
 
-    if (!auth.isLoggedIn) return const LoginScreen();
-    if (auth.isEngineer) return const EngineerDashboard();
-    if (auth.isInvestor) return const InvestorDashboard();
-    return const LoginScreen();
+    // Skip login for development - go directly to EngineerDashboard
+    return const EngineerDashboard();
+
+    // Original flow (uncomment to restore):
+    // if (!auth.isLoggedIn) return const LoginScreen();
+    // if (auth.isEngineer) return const EngineerDashboard();
+    // if (auth.isInvestor) return const InvestorDashboard();
+    // return const LoginScreen();
   }
 }

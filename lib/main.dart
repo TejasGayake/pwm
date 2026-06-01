@@ -6,6 +6,11 @@ import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/tender_provider.dart';
+import 'providers/contribution_provider.dart';
+import 'providers/expense_provider.dart';
+import 'providers/financial_provider.dart';
+import 'providers/investor_provider.dart';
 import 'screens/splash_screen.dart';
 
 /// Global: holds the path of a shared image waiting to be consumed
@@ -71,6 +76,11 @@ class _PwmAppState extends State<PwmApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => TenderProvider()),
+        ChangeNotifierProvider(create: (_) => ContributionProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
+        ChangeNotifierProvider(create: (_) => FinancialProvider()),
+        ChangeNotifierProvider(create: (_) => InvestorProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
