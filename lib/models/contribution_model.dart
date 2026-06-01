@@ -8,6 +8,7 @@ class ContributionModel {
   final DateTime date;
   final String bankReference;
   final String? receiptPhotoUrl;
+  final String paymentMode; // cash, phonepe, bank_transfer, upi
   final DateTime createdAt;
 
   ContributionModel({
@@ -18,6 +19,7 @@ class ContributionModel {
     required this.date,
     this.bankReference = '',
     this.receiptPhotoUrl,
+    this.paymentMode = 'cash',
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -28,6 +30,7 @@ class ContributionModel {
     'date': Timestamp.fromDate(date),
     'bankReference': bankReference,
     'receiptPhotoUrl': receiptPhotoUrl,
+    'paymentMode': paymentMode,
     'createdAt': Timestamp.fromDate(createdAt),
   };
 
@@ -39,6 +42,7 @@ class ContributionModel {
     date: (map['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
     bankReference: map['bankReference'] ?? '',
     receiptPhotoUrl: map['receiptPhotoUrl'],
+    paymentMode: map['paymentMode'] ?? 'cash',
     createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
   );
 }
